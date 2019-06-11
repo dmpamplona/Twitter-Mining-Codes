@@ -1,0 +1,49 @@
+library(twitteR)
+library(ROAuth)
+library(tidytext)
+library(dplyr)
+library(ggplot2)
+
+# Connecting to Twitter
+api_key = ""
+  api_secret = ""
+  access_token = ""
+  access_secret = ""
+  
+setup_twitter_oauth(api_key, api_secret,
+                    access_token, access_secret)
+
+# Storing tweets as list 
+nba <- searchTwitter("KD injury game 5",n=882,lan="en")
+
+# Cleaning the Data
+nba_df <- twListToDF(nba)       
+nba_df$strp <- gsub("http.*","", nba_df$text)
+nba_df$strp <- gsub("RT","", nba_df$strp)
+nba_df$strp <- gsub("@\\w+","", nba_df$strp)
+nba_df$strp <- gsub("https.","", nba_df$strp)
+nba_df$strp <- gsub("\\d+","", nba_df$strp)
+
+
+# unnest_tokens from tidytext 'magically' removes punctuations and converts to lowercase
+nba_df_clean <- nba_df %>% 
+  dplyr::select(strp) %>%
+  unnest_tokens(word,strp)
+
+# Removing stop words 
+clean_tweet_words <- nba_df_clean %>%
+  anti_join(stop_words)
+
+# Get top 15 words based on frequency
+clean_tweet_words %>%
+  dplyr::count(word, sort = TRUE) %>%
+  top_n(20) %>%
+  mutate(word = reorder(word, n)) %>%
+  ggplot(aes(x = word, y = n)) +
+  geom_col() +
+  xlab(NULL) +
+  coord_flip() +
+  labs(y = "Count",
+       x = "Unique words",
+       title = "Count of unique words found in tweets",
+       subtitle = "Stop words removed from the list")
