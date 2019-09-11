@@ -1,0 +1,58 @@
+# Text Mining SONA 2019
+
+# Load packages
+library(tidyverse)
+library(pdftools)
+library(tm)
+library(stringr)
+library(wordcloud)
+
+# Load data
+sona <- pdf_text("C:\\Users\\David\\Desktop\\SONA_2019.pdf")
+
+sona.d <- tibble(
+  page = 1:length(sona),
+  text = sona
+) %>% 
+  separate_rows(text, sep = "\n") %>%
+  group_by(page) %>%
+  mutate(line = row_number()) %>%
+  ungroup() %>%
+  select(page, line, text)
+
+
+# Clean data
+text <- sona.d$text
+text <- gsub("[[:punct:]]", "", text)   # Remove punctuations
+text <- gsub("\\d", "", text)   # Remove numbers
+text <- tolower(text)   # convert to lower case
+text <- removeWords(text, stopwords())    # removes the stopwords (documented) in the text
+text <- gsub("\\b[A-z]\\b{1}", "", text)   # remove any words with only one letter
+text <- stripWhitespace(text)  # strip the extra space created from removing characters earlier
+text <- gsub("ang", "", text); 
+text <- gsub("applause", "", text)
+text <- gsub("laughter", "", text)
+
+# Tokenize and unlist Data
+text.str <- str_split(text, pattern = "\\s+")
+textbag <- unlist(text.str)  #Unlist Data
+
+# Load Pos and Neg Lexicons
+# Find it here: https://www.cs.uic.edu/~liub/FBS/sentiment-analysis.html
+
+poswords <- as.character(read.delim(".\\poswords.txt", sep="\n"))
+negwords <- read.delim(".\\negwords.txt", sep="\n")
+
+positive <- sum(!is.na(match(textbag, poswords)))
+negative <- sum(!is.na(match(textbag, negwords)))
+
+
+# Wordcloud
+# https://rstudio-pubs-static.s3.amazonaws.com/149291_bafd9f23bdee4a75a5726ad93394ec64.html
+
+
+wordcloud(textbag, min.freq = 5, scale = c(5, 0.5),
+          random.order = FALSE)
+
+wordcloud(textbag, min.freq = 5, scale = c(5, 0.5), random.order = FALSE,
+          rot.per=0.35, use.r.layout=FALSE, colors=brewer.pal(8, "Dark2"))
